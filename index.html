@@ -784,6 +784,41 @@
                 toast.classList.add('opacity-0', 'translate-y-4');
             }, 2500);
         }
+          // 9. API LOAD & FALLBACK
+  const defaultTeamColors = [
+    "대한민국", "레알 마드리드", "바르셀로나", "맨체스터 시티", 
+    "첼시", "바이에른 뮌헨", "아스널", "리버풀", "유벤투스", "AC 밀란"
+  ];
+
+  const NEXON_API_KEY = "발급받은_API_KEY_입력";
+  const TEAM_COLOR_API_URL = "https://open.api.nexon.com/fconline/v1/meta/teamcolor";
+
+  let activeTeamColors = [];
+
+  async function loadTeamColorData() {
+    const indicator = document.getElementById("api-indicator");
+
+    try {
+      const response = await fetch(TEAM_COLOR_API_URL, {
+        headers: { "x-nxopen-api-key": NEXON_API_KEY }
+      });
+
+      if (!response.ok) throw new Error();
+
+      const apiData = await response.json();
+      activeTeamColors = apiData;
+
+      if (indicator) indicator.innerText = "🟢";
+
+    } catch (error) {
+      activeTeamColors = defaultTeamColors;
+
+      if (indicator) indicator.innerText = "🔴";
+    }
+  }
+
+  window.addEventListener("DOMContentLoaded", loadTeamColorData);
+
     </script>
 </body>
   <!-- 우측 하단 API 상태 표시 배너 -->
