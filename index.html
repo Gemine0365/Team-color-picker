@@ -786,4 +786,25 @@
         }
     </script>
 </body>
+  <!-- 우측 하단 API 상태 표시 배너 -->
+  <div id="api-status">
+    API <span id="api-indicator">🟡</span>
+  </div>
+
+  <style>
+    #api-status {
+      position: fixed;
+      right: 15px;
+      bottom: 15px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: #ffffff;
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      z-index: 9999;
+      font-family: sans-serif;
+      user-select: none;
+    }
+  </style>
 </html>
