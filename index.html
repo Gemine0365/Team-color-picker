@@ -789,13 +789,16 @@
                 toast.classList.add('opacity-0', 'translate-y-4');
             }, 2500);
         }
-              // 9. API LOAD & FALLBACK
+                // 9. API LOAD & FALLBACK
   const defaultTeamColors = [
     "대한민국", "레알 마드리드", "바르셀로나", "맨체스터 시티", 
     "첼시", "바이에른 뮌헨", "아스널", "리버풀", "유벤투스", "AC 밀란"
   ];
 
-  // 넥슨 메타데이터 공식 Endpoint (정적 파일이므로 API Key 헤더 불필요)
+  // 넥슨 서비스용 API Key
+  const NEXON_API_KEY = "live_21197d6df11990fbaa6c34c0b101302deaaf8849bd711969f47930b4d95af57defe8d04e6d233bd35cf2fabdeb93fb0d";
+
+  // 넥슨 메타데이터 공식 Endpoint
   const TEAM_COLOR_API_URL = "https://open.api.nexon.com/static/fconline/meta/teamcolor.json";
 
   let activeTeamColors = [];
@@ -804,14 +807,13 @@
     const indicator = document.getElementById("api-indicator");
 
     try {
-      // API Key 헤더 없이 순수 JSON 요청
+      // static json 요청
       const response = await fetch(TEAM_COLOR_API_URL);
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const apiData = await response.json();
       
-      // 넥슨 팀컬러 JSON 구조에서 명칭(name 또는 className)만 추출
       if (Array.isArray(apiData)) {
         activeTeamColors = apiData.map(item => 
           typeof item === 'string' ? item : (item.name || item.teamcolor || item.className || JSON.stringify(item))
@@ -822,20 +824,19 @@
         throw new Error("데이터 구조 불일치");
       }
 
-      // 불러오기 성공 시 🟢 표시
       if (indicator && activeTeamColors.length > 0) {
         indicator.innerText = "🟢";
       }
 
     } catch (error) {
       console.error("팀컬러 데이터 불러오기 실패:", error);
-      // 실패 시 기본 데이터 사용 및 🔴 표시
       activeTeamColors = defaultTeamColors;
       if (indicator) indicator.innerText = "🔴";
     }
   }
 
   window.addEventListener("DOMContentLoaded", loadTeamColorData);
+
 
 
 
