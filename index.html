@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FC 온라인 팀컬러 랜점 추첨기</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="max-w-md w-full bg-slate-800 rounded-2xl p-6 shadow-2xl border border-slate-700 text-center">
+    <!-- 헤더 -->
+    <header class="mb-6">
+      <h1 class="text-2xl font-bold text-emerald-400 mb-1">⚽ FC 온라인 팀컬러 추첨기</h1>
+      <p class="text-slate-400 text-xs">오늘 플레이할 팀컬러를 랜덤으로 뽑아보세요!</p>
+    </header>
+
+    <!-- 디스플레이 카드 -->
+    <div class="relative bg-slate-900 border-2 border-emerald-500/30 rounded-xl p-6 mb-6 min-h-[180px] flex flex-col justify-center items-center">
+      <!-- 팀 로고 이미지 영역 -->
+      <div id="logo-box" class="w-20 h-20 mb-3 flex items-center justify-center hidden">
+        <img id="result-logo" src="" alt="팀 로고" class="max-w-full max-h-full object-contain drop-shadow-md">
+      </div>
+      
+      <div id="result-category" class="text-xs font-semibold text-emerald-400 uppercase tracking-widest mb-1 opacity-0 transition-opacity">
+        CATEGORY
+      </div>
+      <div id="result-name" class="text-3xl font-extrabold text-white tracking-tight">
+        준비 완료
+      </div>
+    </div>
+
+    <!-- 설정 옵션 -->
+    <div class="mb-6 text-left bg-slate-900/50 p-3 rounded-lg border border-slate-700/50 text-xs space-y-2">
+      <span class="text-slate-400 font-semibold block mb-1">🎯 추첨 카테고리</span>
+      <div class="flex gap-4">
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" id="chk-club" checked class="accent-emerald-500 rounded"> 클럽 팀
+        </label>
+        <label class="flex items-center gap-1.5 cursor-pointer">
+          <input type="checkbox" id="chk-nation" checked class="accent-emerald-500 rounded"> 국가대표
+        </label>
+      </div>
+    </div>
+
+    <!-- 추첨 버튼 -->
+    <button id="draw-btn" onclick="drawTeamColor()" class="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-lg rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+      <span>🎲 팀컬러 추첨하기</span>
+    </button>
+  </div>
+
+  <footer class="mt-8 text-xs text-slate-500">
+    © Team-color-picker. All rights reserved.
+  </footer>
+
+  <script>
+    // 유럽 5대 리그 + K리그 전체 + 주요 국대 포함 로스터
+    const TEAM_COLORS = [
+      // 🏴󠁧󠁢󠁥󠁮󠁧󠁿 EPL (잉글랜드)
+      { name: "맨체스터 시티", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8456.png" },
+      { name: "맨체스터 유나이티드", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10260.png" },
+      { name: "첼시", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8455.png" },
+      { name: "리버풀", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8650.png" },
+      { name: "아스널", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9825.png" },
+      { name: "토트넘 홋스퍼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8586.png" },
+      { name: "뉴캐슬 유나이티드", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10261.png" },
+      { name: "애스턴 빌라", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10252.png" },
+      { name: "브라이튼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10204.png" },
+      { name: "웨스트햄 유나이티드", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8654.png" },
+      { name: "에버턴", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8668.png" },
+      { name: "울버햄튼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8659.png" },
+      { name: "풀럼", category: "클럽 팀 (EPL)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9879.png" },
+
+      // 🇪🇸 라리가 (스페인)
+      { name: "레알 마드리드", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8633.png" },
+      { name: "바르셀로나", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8634.png" },
+      { name: "아틀레티코 마드리드", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9906.png" },
+      { name: "발렌시아", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10267.png" },
+      { name: "세비야", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8302.png" },
+      { name: "비야레알", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10205.png" },
+      { name: "레알 소시에다드", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8560.png" },
+      { name: "아틀레틱 빌바오", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8315.png" },
+      { name: "레알 베티스", category: "클럽 팀 (라리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8603.png" },
+
+      // 🇮🇹 세리에 A (이탈리아)
+      { name: "유벤투스", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9885.png" },
+      { name: "AC 밀란", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8564.png" },
+      { name: "인터 밀란", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8636.png" },
+      { name: "나폴리", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9875.png" },
+      { name: "AS 로마", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8686.png" },
+      { name: "라치오", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8543.png" },
+      { name: "아탈란타", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8524.png" },
+      { name: "피오렌티나", category: "클럽 팀 (세리에 A)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8535.png" },
+
+      // 🇩🇪 분데스리가 (독일)
+      { name: "바이에른 뮌헨", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9823.png" },
+      { name: "도르트문트", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9789.png" },
+      { name: "바이엘 레버쿠젠", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8178.png" },
+      { name: "RB 라이프치히", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/178475.png" },
+      { name: "아인트라흐트 프랑크푸르트", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9810.png" },
+      { name: "슈투트가르트", category: "클럽 팀 (분데스리가)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/10269.png" },
+
+      // 🇫🇷 리그 1 (프랑스)
+      { name: "파리 생제르맹", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9847.png" },
+      { name: "AS 모나코", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9829.png" },
+      { name: "올림피크 리옹", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9748.png" },
+      { name: "올림피크 마르세유", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8584.png" },
+      { name: "릴 OSK", category: "클럽 팀 (리그 1)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8639.png" },
+
+      // 🇰🇷 K리그1 & K리그2 (대한민국)
+      { name: "울산 HD FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8575.png" },
+      { name: "전북 현대 모터스", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8577.png" },
+      { name: "FC 서울", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8576.png" },
+      { name: "포항 스틸러스", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8574.png" },
+      { name: "인천 유나이티드", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8601.png" },
+      { name: "강원 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/165518.png" },
+      { name: "광주 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/213596.png" },
+      { name: "대전 하나 시티즌", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8578.png" },
+      { name: "제주 SK FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8579.png" },
+      { name: "김천 상무", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8580.png" },
+      { name: "수원 삼성 블루윙즈", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8573.png" },
+      { name: "수원 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/450493.png" },
+      { name: "대구 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8581.png" },
+      { name: "부산 아이파크", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8572.png" },
+      { name: "FC 안양", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/450491.png" },
+      { name: "성남 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8571.png" },
+      { name: "서울 이랜드 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/576135.png" },
+      { name: "경남 FC", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8600.png" },
+      { name: "전남 드래곤즈", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8582.png" },
+      { name: "부천 FC 1995", category: "클럽 팀 (K리그)", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/450490.png" },
+
+      // 🌐 대표 국가대표팀
+      { name: "대한민국", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8568.png" },
+      { name: "프랑스", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/4476.png" },
+      { name: "브라질", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8327.png" },
+      { name: "잉글랜드", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8491.png" },
+      { name: "독일", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8570.png" },
+      { name: "아르헨티나", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8372.png" },
+      { name: "네덜란드", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8611.png" },
+      { name: "포르투갈", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/9909.png" },
+      { name: "이탈리아", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8205.png" },
+      { name: "스페인", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8306.png" },
+      { name: "벨기에", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8254.png" },
+      { name: "우루과이", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8371.png" },
+      { name: "크로아티아", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8569.png" },
+      { name: "일본", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8573.png" },
+      { name: "모로코", category: "국가대표", logo: "https://images.fotmob.com/image_resources/logo/teamlogos/8118.png" }
+    ];
+
+    let isSpinning = false;
+
+    function drawTeamColor() {
+      if (isSpinning) return;
+
+      const allowClub = document.getElementById('chk-club').checked;
+      const allowNation = document.getElementById('chk-nation').checked;
+
+      if (!allowClub && !allowNation) {
+        alert("최소 하나의 카테고리를 선택해주세요!");
+        return;
+      }
+
+      const pool = TEAM_COLORS.filter(t => {
+        if (t.category.includes("클럽 팀") && allowClub) return true;
+        if (t.category === "국가대표" && allowNation) return true;
+        return false;
+      });
+
+      isSpinning = true;
+
+      const nameEl = document.getElementById('result-name');
+      const categoryEl = document.getElementById('result-category');
+      const logoBox = document.getElementById('logo-box');
+      const logoEl = document.getElementById('result-logo');
+      const btn = document.getElementById('draw-btn');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+
+      let counter = 0;
+      const duration = 1200;
+      const intervalTime = 60;
+
+      const timer = setInterval(() => {
+        const randomTemp = pool[Math.floor(Math.random() * pool.length)];
+        nameEl.innerText = randomTemp.name;
+        categoryEl.innerText = randomTemp.category;
+        categoryEl.classList.remove('opacity-0');
+        
+        logoBox.classList.remove('hidden');
+        logoEl.src = randomTemp.logo;
+
+        counter += intervalTime;
+        if (counter >= duration) {
+          clearInterval(timer);
+          
+          const finalResult = pool[Math.floor(Math.random() * pool.length)];
+          nameEl.innerText = finalResult.name;
+          categoryEl.innerText = finalResult.category;
+          logoEl.src = finalResult.logo;
+
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.7 }
+          });
+
+          isSpinning = false;
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+      }, intervalTime);
+    }
+  </script>
+</body>
+</html>
