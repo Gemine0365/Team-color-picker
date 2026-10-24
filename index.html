@@ -793,37 +793,78 @@
                 toast.classList.add('opacity-0', 'translate-y-4');
             }, 2500);
         }
-                      // 9. API LOAD & FALLBACK
+                 // 9. API LOAD & FALLBACK
   const defaultTeamColors = [
-    "대한민국", "레알 마드리드", "바르셀로나", "맨체스터 시티", 
-    "첼시", "바이에른 뮌헨", "아스널", "리버풀", "유벤투스", "AC 밀란"
+    "대한민국", "독일", "레알 마드리드", "바르셀로나", "맨체스터 시티", 
+    "첼시", "바이에른 뮌헨", "아스널", "리버풀", "유벤투스"
   ];
 
-  // 403 차단이 없는 CORS 우회 프록시 적용
-  const TARGET_URL = "https://open.api.nexon.com/static/fconline/meta/teamcolor.json";
-  const TEAM_COLOR_API_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent(TARGET_URL);
+  // API Endpoints (allorigins 우회 프록시)
+  const TEAMCOLOR_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://open.api.nexon.com/static/fconline/meta/teamcolor.json");
+  const SPID_URL = "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://open.api.nexon.com/static/fconline/meta/spid.json");
 
   const NEXON_API_KEY = "live_21197d6df11990fbaa6c34c0b101302deaaf8849bd711969f47930b4d95af57defe8d04e6d233bd35cf2fabdeb93fb0d";
-  let activeTeamColors = [];
 
-  async function loadTeamColorData() {
+  let activeTeamColors = [];
+  let apiPlayerMap = new Map(); // SPID -> 선수명 매핑
+
+  // 🎯 선수별 정확한 소속 팀컬러 DB (잘못 나오는 현상 완벽 방지)
+    const playerTeamMap = {
+    // 대한민국
+    "손흥민": ["대한민국", "토트넘 홋스퍼", "바이어 04 레버쿠젠", "함부르크 SV"],
+    "박지성": ["대한민국", "맨체스터 유나이티드", "PSV 에인트호번"],
+    "김민재": ["대한민국", "바이에른 뮌헨", "나폴리"],
+    "이강인": ["대한민국", "파리 생제르맹", "발렌시아 CF"],
+
+    // 공격수
+    "로베르트 레반도프스키": ["폴란드", "바이에른 뮌헨", "바르셀로나", "보루시아 도르트문트"],
+    "크리스티아누 호날두": ["포르투갈", "레알 마드리드", "맨체스터 유나이티드", "유벤투스", "알 나스르"],
+    "리오넬 메시": ["아르헨티나", "바르셀로나", "파리 생제르맹", "인터 마이애미"],
+    "킬리안 음바페": ["프랑스", "레알 마드리드", "파리 생제르맹", "AS 모나코"],
+    "엘링 홀란": ["노르웨이", "맨체스터 시티", "보루시아 도르트문트", "애프비 레드불 자살츠부르크"],
+    "카림 벤제마": ["프랑스", "레알 마드리드", "올랭피크 리옹"],
+    "해리 케인": ["잉글랜드", "바이에른 뮌헨", "토트넘 홋스퍼"],
+
+    // 미드필더
+    "케빈 더브라위너": ["벨기에", "맨체스터 시티", "볼프스부르크", "첼시"],
+    "토니 크로스": ["독일", "레알 마드리드", "바이에른 뮌헨"],
+    "주드 벨링엄": ["잉글랜드", "레알 마드리드", "보루시아 도르트문트"],
+    "루카 모드리치": ["크로아티아", "레알 마드리드", "토트넘 홋스퍼"],
+    "토마스 뮐러": ["독일", "바이에른 뮌헨"],
+
+    // 수비수 & 골키퍼
+    "버질 판다이크": ["네덜란드", "리버풀", "사우샘프턴"],
+    "마누엘 노이어": ["독일", "바이에른 뮌헨", "샬케 04"],
+    "티보 쿠르투아": ["벨기에", "레알 마드리드", "첼시", "아틀레티코 마드리드"]
+  };
+
+
+  async function loadAllNexonMetaData() {
     const indicator = document.getElementById("api-indicator");
 
     try {
-      const response = await fetch(TEAM_COLOR_API_URL);
+      const [teamRes, spidRes] = await Promise.all([
+        fetch(TEAMCOLOR_URL),
+        fetch(SPID_URL)
+      ]);
 
-      if (!response.ok) throw new Error(`HTTP 오류! 상태 코드: ${response.status}`);
+      if (!teamRes.ok || !spidRes.ok) throw new Error("API 응답 오류");
 
-      const apiData = await response.json();
-      
-      if (Array.isArray(apiData)) {
-        activeTeamColors = apiData.map(item => 
-          typeof item === 'string' ? item : (item.name || item.teamcolor || item.className || JSON.stringify(item))
-        );
-      } else if (apiData && Array.isArray(apiData.teamcolor)) {
-        activeTeamColors = apiData.teamcolor.map(item => typeof item === 'string' ? item : item.name);
-      } else {
-        throw new Error("데이터 구조 불일치");
+      const teamData = await teamRes.json();
+      const spidData = await spidRes.json();
+
+      // 1. 팀컬러 목록 정제
+      if (Array.isArray(teamData)) {
+        activeTeamColors = teamData.map(item => typeof item === 'string' ? item : (item.name || item.className || ""));
+      } else if (teamData && Array.isArray(teamData.teamcolor)) {
+        activeTeamColors = teamData.teamcolor.map(item => typeof item === 'string' ? item : item.name);
+      }
+
+      // 2. 선수 SPID & 이름 매핑 생성 (넥슨 공식 선수명 적용)
+      if (Array.isArray(spidData)) {
+        spidData.forEach(player => {
+          apiPlayerMap.set(player.id, player.name);
+        });
       }
 
       if (indicator && activeTeamColors.length > 0) {
@@ -831,13 +872,28 @@
       }
 
     } catch (error) {
-      console.error("팀컬러 데이터 불러오기 실패 상세 원인:", error.message || error);
+      console.error("메타데이터 로드 실패:", error);
       activeTeamColors = defaultTeamColors;
       if (indicator) indicator.innerText = "🔴";
     }
   }
 
-  window.addEventListener("DOMContentLoaded", loadTeamColorData);
+  // 🎯 선택된 팀컬러에 맞는 정확한 선수만 뽑아주는 함수
+  function getPlayersForTeam(selectedTeam) {
+    const matchedPlayers = [];
+
+    // 선수별 팀컬러 맵에서 선택된 팀컬러가 포함된 선수만 추출
+    for (const [playerName, teams] of Object.entries(playerTeamMap)) {
+      if (teams.includes(selectedTeam)) {
+        matchedPlayers.push(playerName);
+      }
+    }
+
+    return matchedPlayers;
+  }
+
+  window.addEventListener("DOMContentLoaded", loadAllNexonMetaData);
+
 
 
 
